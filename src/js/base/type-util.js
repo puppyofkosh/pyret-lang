@@ -119,7 +119,7 @@ define([], function() {
         };
       }
     }
-    return wrapper(toPyret(runtime, typ));
+    return wrapper(toPyret(runtime, expandType(typ)));
   }
 
   function toPyret(runtime, typ) {
