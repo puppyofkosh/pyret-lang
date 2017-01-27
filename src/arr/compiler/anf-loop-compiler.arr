@@ -1962,7 +1962,7 @@ fun compile-module(self, l, imports-in, prog, freevars, provides, env, flatness-
     mk-abbrevs(l) ^
     cl-snoc(_, define-locations) ^
     cl-append(_, global-binds) ^
-    cl-snoc(wrap-modules(module-specs, toplevel-name, toplevel-fun)))
+    cl-snoc(_, wrap-modules(module-specs, toplevel-name, toplevel-fun)))
   wrap-new-module(module-body)
 end
 
