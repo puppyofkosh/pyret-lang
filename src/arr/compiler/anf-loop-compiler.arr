@@ -1189,8 +1189,11 @@ compiler-visitor = {
                         j-field("types", j-obj(types-obj-fields.fields))
                     ])])),
               j-field("checks", compiled-checks.exp)])]),
-      types-obj-fields.others
-        + compiled-provides.other-stmts + compiled-answer.other-stmts + compiled-checks.other-stmts)
+
+      types-obj-fields.others ^
+      cl-append(_, compiled-provides.other-stmts) ^
+      cl-append(_, compiled-answer.other-stmts) ^
+      cl-append(_, compiled-checks.other-stmts))
   end,
   method a-type-let(self, l, bind, body):
     cases(N.ATypeBind) bind:
@@ -1199,10 +1202,9 @@ compiler-visitor = {
         compiled-ann = compile-ann(ann, self)
         c-block(
           j-block(
-            compiled-ann.other-stmts +
-            [clist: j-var(js-id-of(name), compiled-ann.exp)] +
-            visited-body.block.stmts
-            ),
+            compiled-ann.other-stmts ^
+            cl-snoc(_, j-var(js-id-of(name), compiled-ann.exp)) ^
+            cl-append(_, visited-body.block.stmts)),
           visited-body.new-cases)
       | a-newtype-bind(l2, name, nameb) =>
         brander-id = js-id-of(nameb)
@@ -1212,8 +1214,8 @@ compiler-visitor = {
             [clist:
               j-var(brander-id, rt-method("namedBrander", [clist: j-str(name.toname()), self.get-loc(l2)])),
               j-var(js-id-of(name), rt-method("makeBranderAnn", [clist: j-id(brander-id), j-str(name.toname())]))
-            ] +
-            visited-body.block.stmts),
+            ] ^
+            cl-append(_, visited-body.block.stmts)),
           visited-body.new-cases)
     end
   end,
@@ -1248,7 +1250,7 @@ compiler-visitor = {
       e2-visit = e2.visit(self)
       first-stmt = if J.is-JStmt(e1-visit.exp): e1-visit.exp else: j-expr(e1-visit.exp) end
       c-block(
-        j-block(e1-visit.other-stmts + cl-cons(first-stmt, e2-visit.block.stmts)),
+        j-block(cl-append(e1-visit.other-stmts, cl-cons(first-stmt, e2-visit.block.stmts))),
         e2-visit.new-cases)
     end)
   end,
@@ -1265,11 +1267,11 @@ compiler-visitor = {
     compile-lettable(self, none, e, none, lam(visit-e):
       c-block(
           j-block(
-          cl-sing(j-expr(j-assign(self.cur-step, self.cur-target)))
-            + visit-e.other-stmts
-              + [clist:
-              j-expr(j-assign(self.cur-ans, visit-e.exp)),
-              j-break]),
+            cl-sing(j-expr(j-assign(self.cur-step, self.cur-target))) ^
+            cl-append(_, visit-e.other-stmts) ^
+            cl-append(_, [clist:
+                j-expr(j-assign(self.cur-ans, visit-e.exp)),
+                j-break])),
         cl-empty)
     end)
   end,
@@ -1310,7 +1312,8 @@ compiler-visitor = {
   end,
   method a-dot(self, l :: Loc, obj :: N.AVal, field :: String):
     visit-obj = obj.visit(self)
-    c-exp(get-field(visit-obj.exp, j-str(field), self.get-loc(l)), visit-obj.other-stmts + [clist: j-expr(j-assign(self.cur-apploc, self.get-loc(l)))])
+    c-exp(get-field(visit-obj.exp, j-str(field), self.get-loc(l)),
+      cl-snoc(visit-obj.other-stmts, j-expr(j-assign(self.cur-apploc, self.get-loc(l)))))
   end,
   method a-colon(self, l :: Loc, obj :: N.AVal, field :: String):
     visit-obj = obj.visit(self)
@@ -1328,7 +1331,7 @@ compiler-visitor = {
           compile-fun-body(l, step, temp-full, self.{allow-tco: true}, args, some(len), body, true, false)
         ))
     method-expr = if len < 9:
-      rt-method("makeMethod" + tostring(len - 1), [clist: j-id(temp-full), j-str(name)])
+      rt-method(string-append("makeMethod", tostring(len - 1)), [clist: j-id(temp-full), j-str(name)])
     else:
       rt-method("makeMethodN", [clist: j-id(temp-full), j-str(name)])
     end
@@ -1351,7 +1354,7 @@ compiler-visitor = {
   end,
   method a-array(self, l, values):
     visit-vals = values.map(_.visit(self))
-    other-stmts = visit-vals.foldr(lam(v, acc): v.other-stmts + acc end, cl-empty)
+    other-stmts = visit-vals.foldr(lam(v, acc): cl-append(v.other-stmts, acc) end, cl-empty)
     c-exp(j-list(false, CL.map_list(get-exp, visit-vals)), other-stmts)
   end,
   method a-srcloc(self, l, loc):
@@ -1399,7 +1402,7 @@ compiler-visitor = {
 
   method a-data-expr(self, l, name, namet, variants, shared):
     fun brand-name(base):
-      js-id-of(compiler-name("brand-" + base)).toname()
+      js-id-of(compiler-name(string-append("brand-", base))).toname()
     end
 
     visit-shared-fields = CL.map_list(_.visit(self), shared)
@@ -1414,8 +1417,9 @@ compiler-visitor = {
             j-fun(J.next-j-fun-id(),
               [clist: val],
               j-block(
-                arity-check(self.get-loc(loc), 1) +
-                [clist: j-return(rt-method("makeBoolean", [clist: rt-method("hasBrand", [clist: j-id(val), b])]))]
+                cl-snoc(
+                  arity-check(self.get-loc(loc), 1),
+                  j-return(rt-method("makeBoolean", [clist: rt-method("hasBrand", [clist: j-id(val), b])])))
                 )
               ),
             j-str(pred-name + "-Tester")
@@ -1432,7 +1436,7 @@ compiler-visitor = {
         compiled = compile-ann(m.bind.ann, self)
         {
           anns: cl-snoc(acc.anns, compiled.exp),
-          others: acc.others + compiled.other-stmts
+          others: cl-append(acc.others, compiled.other-stmts)
         }
       end
       compiled-locs = for CL.map_list(m from nonblank-anns): self.get-loc(m.bind.ann.l) end
@@ -1467,10 +1471,10 @@ compiler-visitor = {
 
     fun compile-variant(v :: N.AVariant):
       vname = v.name
-      variant-base-id = js-id-of(compiler-name(vname + "-base"))
+      variant-base-id = js-id-of(compiler-name(string-append(vname, "-base")))
       variant-brand = rt-method("namedBrander", [clist: j-str(vname), self.get-loc(v.l)])
-      variant-brand-id = js-id-of(compiler-name(vname + "-brander"))
-      variant-brand-obj-id = js-id-of(compiler-name(vname + "-brands"))
+      variant-brand-id = js-id-of(compiler-name(string-append(vname, "-brander")))
+      variant-brand-obj-id = js-id-of(compiler-name(string-append(vname, "-brands")))
       variant-brands = j-obj(cl-empty)
       visit-with-fields = v.with-members.map(_.visit(self))
 
@@ -1486,7 +1490,7 @@ compiler-visitor = {
       f-id = const-id("f")
       refl-name = j-str(vname)
 
-      refl-ref-fields-mask-id = js-id-of(compiler-name(vname + "_mutablemask"))
+      refl-ref-fields-mask-id = js-id-of(compiler-name(string-append(vname, "_mutablemask")))
       refl-ref-fields-mask =
         cases(N.AVariant) v:
           | a-singleton-variant(_, _, _) => j-list(false, cl-empty)
@@ -1495,7 +1499,7 @@ compiler-visitor = {
               CL.map_list(lam(m): if N.is-a-mutable(m.member-type): j-true else: j-false end end, members))
         end
 
-      refl-fields-id = js-id-of(compiler-name(vname + "_getfields"))
+      refl-fields-id = js-id-of(compiler-name(string-append(vname, "_getfields")))
       refl-fields =
         cases(N.AVariant) v:
           | a-variant(_, _, _, members, _) =>
@@ -1519,7 +1523,7 @@ compiler-visitor = {
       match-field = j-field("_match", rt-method("makeMatch", [clist: refl-name, j-num(member-count(v))]))
 
       stmts =
-        visit-with-fields.foldr(lam(vf, acc): vf.other-stmts + acc end,
+        visit-with-fields.foldr(lam(vf, acc): cl-append(vf.other-stmts, acc) end,
           [clist:
             j-var(refl-fields-id, refl-fields),
             j-var(refl-ref-fields-mask-id, refl-ref-fields-mask),
@@ -1544,7 +1548,9 @@ compiler-visitor = {
             make-variant-constructor(constr-loc, variant-base-id, variant-brand-obj-id, members,
               refl-name, j-id(refl-ref-fields-mask-id), j-id(refl-fields-id), j-id(variant-base-id))
           {
-            stmts: stmts + compiled-constr.other-stmts + [clist: j-var(constr-vname, compiled-constr.exp)],
+            stmts: stmts ^
+              cl-append(_,compiled-constr.other-stmts) ^
+              cl-snoc(_, j-var(constr-vname, compiled-constr.exp)),
             constructor: j-field(vname, j-id(constr-vname)),
             predicate: predicate
           }
@@ -1560,15 +1566,15 @@ compiler-visitor = {
     variant-pieces = variants.map(compile-variant)
 
     header-stmts = for fold(acc from cl-empty, piece from variant-pieces):
-      acc + piece.stmts
+      cl-append(acc, piece.stmts)
     end
     obj-fields = for fold(acc from cl-empty, piece from variant-pieces):
-      acc + [clist: piece.predicate, piece.constructor]
+      cl-append(acc, [clist: piece.predicate, piece.constructor])
     end
 
     data-predicate = j-field(name, get-field(external-brand, j-str("test"), self.get-loc(l))) #make-brand-predicate(l, j-dot(external-brand, "_brand"), name)
 
-    data-object = rt-method("makeObject", [clist: j-obj([clist: data-predicate] + obj-fields)])
+    data-object = rt-method("makeObject", [clist: j-obj(cl-cons(data-predicate, obj-fields))])
 
     c-exp(data-object, header-stmts)
   end
@@ -1933,7 +1939,7 @@ fun compile-module(self, l, imports-in, prog, freevars, provides, env, flatness-
     end
     provides-obj = compile-provides(provides)
     the-module = j-fun(J.next-j-fun-id(),
-      [clist: RUNTIME.id, NAMESPACE.id, source-name.id] + input-ids, module-body)
+      cl-append([clist: RUNTIME.id, NAMESPACE.id, source-name.id], input-ids), module-body)
     [D.string-dict:
       "requires", j-list(true, module-locators-as-js),
       "provides", provides-obj,
@@ -1952,11 +1958,11 @@ fun compile-module(self, l, imports-in, prog, freevars, provides, env, flatness-
   toplevel-fun = j-fun(J.next-j-fun-id(), [clist: formal-shadow-name(resumer)], visited-body)
   define-locations = j-var(LOCS, j-list(true, locations))
   module-body = j-block(
-#                    [clist: j-expr(j-str("use strict"))] +
-                    mk-abbrevs(l) +
-                    [clist: define-locations] +
-                    global-binds +
-                    [clist: wrap-modules(module-specs, toplevel-name, toplevel-fun)])
+    #                    [clist: j-expr(j-str("use strict"))] +
+    mk-abbrevs(l) ^
+    cl-snoc(_, define-locations) ^
+    cl-append(_, global-binds) ^
+    cl-snoc(wrap-modules(module-specs, toplevel-name, toplevel-fun)))
   wrap-new-module(module-body)
 end
 
