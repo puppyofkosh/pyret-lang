@@ -35,7 +35,7 @@ cl-cons = CL.concat-cons
 cl-snoc = CL.concat-snoc
 
 fun type-name(str :: String) -> String:
-  "$type$" + str
+  string-append("$type$", str)
 end
 
 j-fun = J.j-fun
@@ -131,12 +131,12 @@ fun const-id(name :: String):
 end
 
 fun compiler-name(id):
-  const-id("$" + id)
+  const-id(string-append("$",id))
 end
 
 fun formal-shadow-name(id :: A.Name) -> A.Name:
   js-id = js-id-of(id)
-  A.s-name(A.dummy-loc, "$" + js-id.tosourcestring())
+  A.s-name(A.dummy-loc, string-append("$", js-id.tosourcestring()))
 end
 
 get-field-loc = j-id(const-id("G"))
@@ -237,7 +237,7 @@ fun compile-ann(ann :: A.Ann, visitor) -> DAG.CaseResults%(is-c-exp):
             names: cl-snoc(acc.names, j-str(field.name)),
             locs: cl-snoc(acc.locs, visitor.get-loc(field.l)),
             fields: cl-snoc(acc.fields, j-field(field.name, compiled.exp)),
-            others: acc.others + compiled.other-stmts
+            others: cl-append(acc.others, compiled.other-stmts)
           }
         end
       c-exp(
@@ -607,13 +607,15 @@ fun compile-fun-body(l :: Loc, step :: A.Name, fun-name :: A.Name, compiler, arg
               j-switch(j-id(step), switch-cases)])))
 
 #  compiler.add-phase("Finish function: " + l.format(true), nothing)
-  j-block([clist:
-      j-var(step, j-num(0)),
-      j-var(elided-frames, j-num(0)),
-      j-var(local-compiler.cur-ans, undefined),
-      j-var(apploc, local-compiler.get-loc(l))]
-    + fun-body
-    + after-loop)
+  j-block(
+    cl-append(
+      cl-append([clist:
+          j-var(step, j-num(0)),
+          j-var(elided-frames, j-num(0)),
+          j-var(local-compiler.cur-ans, undefined),
+          j-var(apploc, local-compiler.get-loc(l))],
+        fun-body),
+      after-loop))
 end
 
 fun compile-anns(visitor, step, binds :: List<N.ABind>, entry-label):
@@ -640,16 +642,16 @@ fun compile-anns(visitor, step, binds :: List<N.ABind>, entry-label):
       compiled-ann = compile-ann(b.ann, visitor)
       new-label = visitor.make-label()
       new-case = j-case(cur-target,
-        j-block(compiled-ann.other-stmts +
-          [clist:
-            j-expr(j-assign(step, new-label)),
-            j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
-            j-var(ann-result, rt-method("_checkAnn",
-              [clist: visitor.get-loc(b.ann.l), compiled-ann.exp, j-id(js-id-of(b.id))])),
-            j-if1(rt-method("isContinuation", [clist: j-id(ann-result)]),
-              j-block([clist:
-                j-expr(j-assign(visitor.cur-ans, j-id(ann-result)))])),
-            j-break]))
+        j-block(cl-append(compiled-ann.other-stmts,
+            [clist:
+              j-expr(j-assign(step, new-label)),
+              j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
+              j-var(ann-result, rt-method("_checkAnn",
+                  [clist: visitor.get-loc(b.ann.l), compiled-ann.exp, j-id(js-id-of(b.id))])),
+              j-if1(rt-method("isContinuation", [clist: j-id(ann-result)]),
+                j-block([clist:
+                    j-expr(j-assign(visitor.cur-ans, j-id(ann-result)))])),
+              j-break])))
       cur-target := new-label
       cl-snoc(acc, new-case)
     end
@@ -663,15 +665,17 @@ fun compile-annotated-let(visitor, b :: BindType, compiled-e :: DAG.CaseResults%
     else if is-b-array(b):
       cl-sing(j-expr(j-bracket-assign(j-id(js-id-of(b.value.id)), j-num(b.idx), compiled-e.exp)))
     else:
-      raise("Unknown " + b.value.label() + " in compile-annotated-let")
+      raise(string-append(string-append("Unknown ", b.value.label()), " in compile-annotated-let"))
     end
   shadow b = b.value
   if A.is-a-blank(b.ann) or A.is-a-any(b.ann):
     c-block(
       j-block(
-        compiled-e.other-stmts +
-        id-assign +
-        compiled-body.block.stmts
+        cl-append(
+          cl-append(
+            compiled-e.other-stmts,
+            id-assign),
+          compiled-body.block.stmts)
         ),
       compiled-body.new-cases
       )
