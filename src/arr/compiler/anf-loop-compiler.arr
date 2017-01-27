@@ -255,7 +255,7 @@ fun compile-ann(ann :: A.Ann, visitor) -> DAG.CaseResults%(is-c-exp):
        {
           locs: cl-snoc(acc.locs, visitor.get-loc(ann-loc(field))),
           fields: cl-snoc(acc.fields, compiled.exp),
-          others: acc.others + compiled.other-stmts
+          others: cl-append(acc.others, compiled.other-stmts)
        }
        end
      c-exp(
@@ -278,8 +278,7 @@ fun compile-ann(ann :: A.Ann, visitor) -> DAG.CaseResults%(is-c-exp):
       compiled-exp = expr-to-compile.visit(visitor)
       c-exp(
         rt-method("makePredAnn", [clist: compiled-base.exp, compiled-exp.exp, j-str(name)]),
-        compiled-base.other-stmts +
-        compiled-exp.other-stmts
+        cl-append(compiled-base.other-stmts, compiled-exp.other-stmts)
         )
     | a-dot(l, m, field) =>
       c-exp(
@@ -536,16 +535,16 @@ fun compile-fun-body(l :: Loc, step :: A.Name, fun-name :: A.Name, compiler, arg
   trace-enter = rt-method("traceEnter", entryExit)
   first-entry-stmts = cases(Option) opt-arity:
     | some(arity) =>
-      arity-check(local-compiler.get-loc(l), arity) +
-      copy-formals-to-args +
+      stmts = cl-append(arity-check(local-compiler.get-loc(l), arity),
+        copy-formals-to-args)
       if show-stack-trace:
-        cl-sing(trace-enter)
+        cl-snoc(stmts, trace-enter)
       else:
-        cl-empty
+        stmts
       end
     | none =>
       if show-stack-trace:
-        cl-sing(trace-enter) + copy-formals-to-args
+        cl-cons(trace-enter, copy-formals-to-args)
       else if no-real-args:
         cl-empty
       else:
@@ -594,19 +593,20 @@ fun compile-fun-body(l :: Loc, step :: A.Name, fun-name :: A.Name, compiler, arg
           # j-expr(j-app(j-id("console.log"), [list: j-str("GAS is "), rt-field("GAS")])),
           j-expr(j-assign(local-compiler.cur-ans, (rt-method("makeCont", cl-empty))))]))
 
+  gas-check-or-comment = if is-flat:
+    cl-sing(j-expr(j-raw-code("// callee optimization")))
+  else:
+    cl-sing(gas-check)
+  end
   fun-body =
-    preamble-stmts +
-    if is-flat:
-      [clist: j-expr(j-raw-code("// callee optimization"))]
-    else:
-      [clist: gas-check]
-    end
-    + cl-sing(j-while(check-cont,
+    cl-append(
+      cl-append(preamble-stmts, gas-check-or-comment),
+      cl-sing(j-while(check-cont,
           j-block([clist:
               # j-expr(j-app(j-id("console.log"), [list: j-str("In " + fun-name + ", step "), j-id(step), j-str(", GAS = "), rt-field("GAS"), j-str(", ans = "), j-id(local-compiler.cur-ans)])),
-              j-switch(j-id(step), switch-cases)])))
+              j-switch(j-id(step), switch-cases)]))))
 
-#  compiler.add-phase("Finish function: " + l.format(true), nothing)
+  #  compiler.add-phase("Finish function: " + l.format(true), nothing)
   j-block(
     cl-append(
       cl-append([clist:
@@ -685,15 +685,15 @@ fun compile-annotated-let(visitor, b :: BindType, compiled-e :: DAG.CaseResults%
     after-ann-case = j-case(after-ann, j-block(compiled-body.block.stmts))
     c-block(
       j-block(
-        compiled-e.other-stmts +
-        id-assign +
-        [clist:
-          j-expr(j-assign(step, after-ann)),
-          j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
-          j-expr(rt-method("checkTupleBind", [clist: j-id(js-id-of(b.id)), j-num(b.ann.fields.length()),
-                visitor.get-loc(b.ann.l)])),
-          j-break
-        ]),
+        cl-append(compiled-e.other-stmts,
+          cl-append(id-assign,
+            [clist:
+              j-expr(j-assign(step, after-ann)),
+              j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
+              j-expr(rt-method("checkTupleBind", [clist: j-id(js-id-of(b.id)), j-num(b.ann.fields.length()),
+                    visitor.get-loc(b.ann.l)])),
+              j-break
+            ]))),
       cl-cons(after-ann-case, compiled-body.new-cases))
   else:
     step = visitor.cur-step
@@ -703,20 +703,20 @@ fun compile-annotated-let(visitor, b :: BindType, compiled-e :: DAG.CaseResults%
     ann-result = fresh-id(compiler-name("ann-check"))
     c-block(
       j-block(
-        compiled-e.other-stmts +
-        id-assign +
-        compiled-ann.other-stmts +
-        [clist:
-          j-expr(j-assign(step, after-ann)),
-          j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
-          j-var(ann-result, rt-method("_checkAnn",
-            [clist: visitor.get-loc(b.ann.l), compiled-ann.exp, j-id(js-id-of(b.id))])),
-          j-if1(rt-method("isContinuation", [clist: j-id(ann-result)]),
-            j-block([clist:
-              j-expr(j-assign(visitor.cur-ans, j-id(ann-result)))])),
-          j-break
-        ]),
-      cl-cons(after-ann-case, compiled-body.new-cases))
+        compiled-e.other-stmts ^
+        cl-append(_, id-assign) ^
+        cl-append(_, compiled-ann.other-stmts) ^
+        cl-append(_, [clist:
+            j-expr(j-assign(step, after-ann)),
+            j-expr(j-assign(visitor.cur-apploc, visitor.get-loc(b.ann.l))),
+            j-var(ann-result, rt-method("_checkAnn",
+                [clist: visitor.get-loc(b.ann.l), compiled-ann.exp, j-id(js-id-of(b.id))])),
+            j-if1(rt-method("isContinuation", [clist: j-id(ann-result)]),
+              j-block([clist:
+                  j-expr(j-assign(visitor.cur-ans, j-id(ann-result)))])),
+            j-break
+          ])),
+        cl-cons(after-ann-case, compiled-body.new-cases))
   end
 end
 
@@ -755,7 +755,8 @@ fun compile-split-method-app(l, compiler, opt-dest, obj, methname, args, opt-bod
   # num-args = args.length()
 
   if J.is-j-id(compiled-obj):
-    call = rt-method("maybeMethodCall", [clist: compiled-obj, j-str(methname), compiler.get-loc(l)] + compiled-args)
+    call = rt-method("maybeMethodCall",
+      cl-append([clist: compiled-obj, j-str(methname), compiler.get-loc(l)], compiled-args))
     {new-cases; after-app-label} = get-new-cases(compiler, opt-dest, opt-body, ans)
     c-block(j-block([clist:
       j-expr(j-assign(step,  after-app-label)),
@@ -826,7 +827,7 @@ fun compile-split-app(l, compiler, opt-dest, f, args, opt-body, app-info, is-def
         #   end,
         #   compiled-args.to-list(),
         #   compiler.args),
-        [clist: j-continue]),
+        cl-sing(j-continue)),
       new-cases)
   else:
     c-block(
@@ -886,7 +887,7 @@ fun compile-flat-app(l, compiler, opt-dest, f, args, opt-body, app-info, is-defi
   # (this is basically our optimization, since we're not starting a new case
   # for the next block)
   c-block(
-    j-block(call-code + j-block-to-stmt-list(remaining-code)),
+    j-block(cl-append(call-code, j-block-to-stmt-list(remaining-code))),
     new-cases)
 end
 
@@ -900,9 +901,11 @@ fun compile-split-if(compiler, opt-dest, cond, consq, alt, opt-body):
   compiled-alt = alt.visit(compiler-after-if)
 
   new-cases =
-    cl-cons(j-case(consq-label, compiled-consq.block), compiled-consq.new-cases)
-    + cl-cons(j-case(alt-label, compiled-alt.block), compiled-alt.new-cases)
-    + after-if-cases
+    cl-append(
+      cl-append(
+        cl-cons(j-case(consq-label, compiled-consq.block), compiled-consq.new-cases),
+        cl-cons(j-case(alt-label, compiled-alt.block), compiled-alt.new-cases)),
+      after-if-cases)
   c-block(
     j-block([clist:
         j-expr(j-assign(compiler.cur-step,
@@ -945,7 +948,7 @@ fun compile-cases-branch(compiler, compiled-val, branch :: N.ACasesBranch, cases
         j-break]
 
     c-block(
-      j-block(preamble + actual-app),
+      j-block(cl-append(preamble, actual-app)),
       cl-empty)
   end
 end
@@ -1007,7 +1010,7 @@ fun compile-inline-cases-branch(compiler, compiled-val, branch, compiled-body, c
           ^ cl-snoc(_, j-case(ann-cases.new-label, compiled-body.block)))
     end
   else:
-    c-block(j-block(preamble + compiled-body.block.stmts), compiled-body.new-cases)
+    c-block(j-block(cl-append(preamble, compiled-body.block.stmts)), compiled-body.new-cases)
   end
 end
 fun compile-split-cases(compiler, cases-loc, opt-dest, typ, val :: N.AVal, branches :: List<N.ACasesBranch>, _else :: N.AExpr, opt-body :: Option<N.AExpr>):
@@ -1030,9 +1033,7 @@ fun compile-split-cases(compiler, cases-loc, opt-dest, typ, val :: N.AVal, branc
   dispatch-table = j-obj(for CL.map_list2(branch from branches, label from branch-labels): j-field(branch.name, label) end)
   dispatch = j-id(fresh-id(compiler-name("cases_dispatch")))
   # NOTE: Ignoring typ for the moment!
-  new-cases =
-    branch-else-cases
-    + after-cases-cases
+  new-cases = cl-append(branch-else-cases, after-cases-cases)
   c-block(
     j-block([clist:
         j-var(dispatch.id, dispatch-table),
@@ -1153,7 +1154,7 @@ compiler-visitor = {
       compiled = compile-ann(ann.ann, self)
       {
         fields: cl-snoc(acc.fields, j-field(ann.name, compiled.exp)),
-        others: acc.others + compiled.other-stmts
+        others: cl-append(acc.others, compiled.other-stmts)
       }
     end
 
@@ -1974,7 +1975,7 @@ fun splitting-compiler(env, add-phase, flatness-env, provides, options):
       freevars = N.freevars-e(body)
       add-phase("Freevars-e", freevars)
       ans = compile-module(self, l, imports, body, freevars, provides, env, flatness-env)
-      add-phase("Total simplification: " + tostring(total-time), nothing)
+      add-phase(string-append("Total simplification: ", tostring(total-time)), nothing)
       ans
     end
   }
