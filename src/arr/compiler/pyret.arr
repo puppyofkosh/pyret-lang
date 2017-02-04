@@ -58,8 +58,10 @@ fun main(args):
     "type-check",
       C.flag(C.once, "Type-check the program during compilation"),
     "inline-case-body-limit",
-      C.next-val-default(C.Number, DEFAULT-INLINE-CASE-LIMIT, none, C.once, "Set number of steps that could be inlined in case body")
-  ]
+      C.next-val-default(C.Number, DEFAULT-INLINE-CASE-LIMIT, none, C.once, "Set number of steps that could be inlined in case body"),
+    "flatness-threshold",
+      C.next-val-default(C.Number, CS.DEFAULT-FLATNESS-THRESHOLD, none, C.once, "One plus maximum flatness for a function get the flatness optimization (-1 for all functions to be treated as flat)")
+        ]
 
   params-parsed = C.parse-args(options, args)
 
@@ -118,7 +120,8 @@ fun main(args):
                 proper-tail-calls: tail-calls,
                 compiled-cache: compiled-dir,
                 display-progress: display-progress,
-                inline-case-body-limit: inline-case-body-limit
+                inline-case-body-limit: inline-case-body-limit,
+                flatness-threshold: r.get-value("flatness-threshold")
               })
         else if r.has-key("serve"):
           port = r.get-value("port")
