@@ -42,6 +42,7 @@ is-s-block = A.is-s-block
 type Loc = SL.Srcloc
 
 DEFAULT-FLATNESS-THRESHOLD = 0
+INFINITE-FLATNESS-VALUE = -1
 
 data Dependency:
   | dependency(protocol :: String, arguments :: List<String>)

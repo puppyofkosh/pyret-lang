@@ -433,6 +433,11 @@ var total-time = 0
 
 show-stack-trace = false
 fun compile-fun-body(l :: Loc, step :: A.Name, fun-name :: A.Name, compiler, args :: List<N.ABind>, opt-arity :: Option<Number>, body :: N.AExpr, should-report-error-frame :: Boolean, is-flat :: Boolean) -> J.JBlock block:
+  shadow is-flat = if compiler.options.flatness-threshold == CS.INFINITE-FLATNESS-VALUE:
+    true
+  else:
+    is-flat
+  end
   make-label = make-label-sequence(0)
   ret-label = make-label()
   ans = fresh-id(compiler-name("ans"))
@@ -1098,7 +1103,9 @@ fun compile-a-app(l :: N.Loc, f :: N.AVal, args :: List<N.AVal>,
     app-info :: A.AppInfo):
 
   is-safe-id = N.is-a-id(f) or N.is-a-id-safe-letrec(f)
-  app-compiler = if is-safe-id and is-function-flat(compiler, f.id.key()):
+  app-compiler = if compiler.options.flatness-threshold == CS.INFINITE-FLATNESS-VALUE:
+    compile-flat-app
+  else if is-safe-id and is-function-flat(compiler, f.id.key()):
     compile-flat-app
   else:
     compile-split-app
