@@ -106,14 +106,15 @@ $(PHASEB)/pyret.jarr: $(PHASEA)/pyret.jarr $(PHASEB_ALL_DEPS) $(patsubst src/%,$
                       --builtin-arr-dir src/arr/trove/ \
                       --compiled-dir build/phaseB/compiled/ \
                       -no-check-mode $(EF) \
-                      --require-config src/scripts/standalone-configB.json
+                      --require-config src/scripts/standalone-configB.json \
+                      --flatness-threshold -1
 
 
 .PHONY : phaseC
 phaseC: $(PHASEC)/pyret.jarr
 
 $(PHASEC)/pyret.jarr: $(PHASEB)/pyret.jarr $(PHASEC_ALL_DEPS) $(patsubst src/%,$(PHASEC)/%,$(PARSERS))
-	$(NODE) $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
+	$(NODE) --stack-size=500000 $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
                       --build-runnable src/arr/compiler/pyret.arr \
                       --builtin-js-dir src/js/trove/ \
                       --builtin-arr-dir src/arr/trove/ \
