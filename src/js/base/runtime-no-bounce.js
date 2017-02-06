@@ -3069,9 +3069,9 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         $fun_ans = $ar.vars[0];
       }
       if (--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) {
-        thisRuntime.EXN_STACKHEIGHT = 0;
-        skipLoop = true;
-        $ans = thisRuntime.makeCont();
+        // thisRuntime.EXN_STACKHEIGHT = 0;
+        // skipLoop = true;
+        // $ans = thisRuntime.makeCont();
       }
       while(!skipLoop) {
         switch($step) {
@@ -3116,8 +3116,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
           }
         }
         if (--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) {
-          thisRuntime.EXN_STACKHEIGHT = 0;
-          return thisRuntime.makeCont();
+          // thisRuntime.EXN_STACKHEIGHT = 0;
+          // return thisRuntime.makeCont();
         }
         while(true) {
           started = true;
@@ -3127,8 +3127,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
           if (isContinuation(res)) { return res; }
 
           if (--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }  
           else { i = i + 1; }
         }
@@ -3816,17 +3816,17 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       }
       var cleanQuit = true;
       if (--thisRuntime.GAS <= 0) {
-        thisRuntime.EXN_STACKHEIGHT = 0;
-        cleanQuit = false;
-        $ans = thisRuntime.makeCont();
+        // thisRuntime.EXN_STACKHEIGHT = 0;
+        // cleanQuit = false;
+        // $ans = thisRuntime.makeCont();
       }
       
       while (cleanQuit && (curIdx < len)) {
         if (--thisRuntime.RUNGAS <= 0) {
-          thisRuntime.EXN_STACKHEIGHT = 0;
-          cleanQuit = false;
-          $ans = thisRuntime.makeCont();
-          break;
+          // thisRuntime.EXN_STACKHEIGHT = 0;
+          // cleanQuit = false;
+          // $ans = thisRuntime.makeCont();
+          // break;
         }
         switch($step) {
         case 0:
@@ -3874,16 +3874,16 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       }
       var cleanQuit = true;
       if (--thisRuntime.GAS <= 0) {
-        thisRuntime.EXN_STACKHEIGHT = 0;
-        $ans = thisRuntime.makeCont();
-        cleanQuit = false;
+        // thisRuntime.EXN_STACKHEIGHT = 0;
+        // $ans = thisRuntime.makeCont();
+        // cleanQuit = false;
       }
       
       while (cleanQuit && curIdx < len) {
         if (--thisRuntime.RUNGAS <= 0) {
-          thisRuntime.EXN_STACKHEIGHT = 0;
-          $ans = thisRuntime.makeCont();
-          cleanQuit = false;
+          // thisRuntime.EXN_STACKHEIGHT = 0;
+          // $ans = thisRuntime.makeCont();
+          // cleanQuit = false;
         }
         switch($step) {
         case 0:
@@ -3991,8 +3991,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function foldHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var res = f.app(currentAcc, arr[currentIndex], currentIndex + start);
@@ -4028,8 +4028,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function mapHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var res = f.app(arr[currentIndex]);
@@ -4064,8 +4064,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function eachHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var res = f.app(arr[currentIndex]);
@@ -4097,8 +4097,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function mapHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var res = f.app(arr[currentIndex], currentIndex);
@@ -4134,8 +4134,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentFst = thisRuntime.getColonField(currentLst, "first");
           currentLst = thisRuntime.getColonField(currentLst, "rest");
@@ -4177,8 +4177,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function mapHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var toCall = currentIndex === 0 ? f1 : f;
@@ -4215,8 +4215,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentFst = thisRuntime.getColonField(currentLst, "first");
           currentLst = thisRuntime.getColonField(currentLst, "rest");
@@ -4257,8 +4257,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function filterHelp() {
         while(currentIndex < (length - 1)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           currentIndex += 1;
           var res = f.app(arr[currentIndex]);
@@ -4299,8 +4299,8 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
           if(--thisRuntime.RUNGAS <= 0) {
-            thisRuntime.EXN_STACKHEIGHT = 0;
-            return thisRuntime.makeCont();
+            // thisRuntime.EXN_STACKHEIGHT = 0;
+            // return thisRuntime.makeCont();
           }
           var fst = thisRuntime.getColonField(currentLst, "first");
           currentLst = thisRuntime.getColonField(currentLst, "rest");
