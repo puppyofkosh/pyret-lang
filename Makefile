@@ -114,13 +114,15 @@ $(PHASEB)/pyret.jarr: $(PHASEA)/pyret.jarr $(PHASEB_ALL_DEPS) $(patsubst src/%,$
 phaseC: $(PHASEC)/pyret.jarr
 
 $(PHASEC)/pyret.jarr: $(PHASEB)/pyret.jarr $(PHASEC_ALL_DEPS) $(patsubst src/%,$(PHASEC)/%,$(PARSERS))
-	$(NODE) --stack-size=500000 $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
+	ulimit -s unlimited; $(NODE) --stack-size=10000 $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
                       --build-runnable src/arr/compiler/pyret.arr \
                       --builtin-js-dir src/js/trove/ \
                       --builtin-arr-dir src/arr/trove/ \
                       --compiled-dir build/phaseC/compiled/ \
                       -no-check-mode $(EF) \
-                      --require-config src/scripts/standalone-configC.json
+                      --require-config src/scripts/standalone-configC.json \
+                      --flatness-threshold -1
+
 
 .PHONY : show-comp
 show-comp: build/show-compilation.jarr
