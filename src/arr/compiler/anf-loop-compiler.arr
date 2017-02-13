@@ -762,12 +762,28 @@ fun compile-split-method-app(l, compiler, opt-dest, obj, methname, args, opt-bod
   if J.is-j-id(compiled-obj):
     call = rt-method("maybeMethodCall",
       cl-append([clist: compiled-obj, j-str(methname), compiler.get-loc(l)], compiled-args))
-    {new-cases; after-app-label} = get-new-cases(compiler, opt-dest, opt-body, ans)
-    c-block(j-block([clist:
-      j-expr(j-assign(step,  after-app-label)),
-      j-expr(j-assign(ans, call)),
-      j-break
-    ]), new-cases)
+
+    # UNSAFE HACK
+    # Leave out updating step/ans since this call is treated as flat
+    call-code = [clist: j-expr(j-raw-code("// unsafe method call opt")),
+      j-expr(j-assign(ans, call))]
+    
+    {remaining-code; new-cases} = cases (Option) opt-body:
+      | some(body) =>
+        get-remaining-code(compiler, opt-dest, body, ans)
+      | none =>
+        # Special case: there is no more code after this so just jump to the
+        # special last block in the function
+        body = j-block([clist:
+            j-expr(j-assign(compiler.cur-step, compiler.cur-target)),
+            j-break
+          ])
+        {body; cl-empty}
+    end
+
+    c-block(
+      j-block(cl-append(call-code, j-block-to-stmt-list(remaining-code))),
+      new-cases)
   else:
     obj-id = j-id(fresh-id(compiler-name("obj")))
     colon-field = rt-method("getColonFieldLoc", [clist: obj-id, j-str(methname), compiler.get-loc(l)])
@@ -1103,13 +1119,16 @@ fun compile-a-app(l :: N.Loc, f :: N.AVal, args :: List<N.AVal>,
     app-info :: A.AppInfo):
 
   is-safe-id = N.is-a-id(f) or N.is-a-id-safe-letrec(f)
-  app-compiler = if compiler.options.flatness-threshold == CS.INFINITE-FLATNESS-VALUE:
-    compile-flat-app
-  else if is-safe-id and is-function-flat(compiler, f.id.key()):
-    compile-flat-app
-  else:
-    compile-split-app
-  end
+
+  # UNSAFE HACK
+  app-compiler = compile-flat-app
+  # app-compiler = if compiler.options.flatness-threshold == CS.INFINITE-FLATNESS-VALUE:
+  #   compile-flat-app
+  # else if is-safe-id and is-function-flat(compiler, f.id.key()):
+  #   compile-flat-app
+  # else:
+  #   compile-split-app
+  # end
 
   is-fn = is-safe-id and is-id-fn-name(compiler.flatness-env, f.id.key())
   app-compiler(l, compiler, b, f, args, opt-body, app-info, is-fn)
