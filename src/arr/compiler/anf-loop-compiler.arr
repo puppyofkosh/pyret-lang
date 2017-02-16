@@ -760,13 +760,49 @@ fun compile-split-method-app(l, compiler, opt-dest, obj, methname, args, opt-bod
   # num-args = args.length()
 
   if J.is-j-id(compiled-obj):
-    call = rt-method("maybeMethodCall",
-      cl-append([clist: compiled-obj, j-str(methname), compiler.get-loc(l)], compiled-args))
+# <<<<<<< HEAD
+#     call = rt-method("maybeMethodCall",
+#       cl-append([clist: compiled-obj, j-str(methname), compiler.get-loc(l)], compiled-args))
 
-    # UNSAFE HACK
-    # Leave out updating step/ans since this call is treated as flat
-    call-code = [clist: j-expr(j-raw-code("// unsafe method call opt")),
-      j-expr(j-assign(ans, call))]
+#     # UNSAFE HACK
+#     # Leave out updating step/ans since this call is treated as flat
+#     call-code = [clist: j-expr(j-raw-code("// unsafe method call opt")),
+#       j-expr(j-assign(ans, call))]
+    
+#     {remaining-code; new-cases} = cases (Option) opt-body:
+#       | some(body) =>
+#         get-remaining-code(compiler, opt-dest, body, ans)
+#       | none =>
+#         # Special case: there is no more code after this so just jump to the
+#         # special last block in the function
+#         body = j-block([clist:
+#             j-expr(j-assign(compiler.cur-step, compiler.cur-target)),
+#             j-break
+#           ])
+#         {body; cl-empty}
+#     end
+
+#     c-block(
+#       j-block(cl-append(call-code, j-block-to-stmt-list(remaining-code))),
+#       new-cases)
+
+# =======
+    colon-field = rt-method("getColonFieldLoc", [clist: compiled-obj, j-str(methname), compiler.get-loc(l)])
+    colon-field-id = j-id(fresh-id(compiler-name("field")))
+    check-method = rt-method("isMethod", [clist: colon-field-id])
+
+    call-code = [clist:
+      j-expr(j-raw-code("// unsafe method call opt")),
+      j-var(colon-field-id.id, colon-field),
+      j-if(check-method, j-block([clist: 
+            j-expr(j-assign(ans, j-app(j-dot(colon-field-id, "full_meth"),
+                  cl-cons(compiled-obj, compiled-args))))
+          ]),
+        j-block([clist:
+            check-fun(compiler.get-loc(l), colon-field-id),
+            j-expr(j-assign(ans, app(compiler.get-loc(l), colon-field-id, compiled-args)))
+          ]))
+    ]
     
     {remaining-code; new-cases} = cases (Option) opt-body:
       | some(body) =>
@@ -780,10 +816,33 @@ fun compile-split-method-app(l, compiler, opt-dest, obj, methname, args, opt-bod
           ])
         {body; cl-empty}
     end
-
+    
     c-block(
       j-block(cl-append(call-code, j-block-to-stmt-list(remaining-code))),
       new-cases)
+    
+#     {new-cases; after-app-label} = get-new-cases(compiler, opt-dest, opt-body, ans)
+#     c-block(
+#       j-block([clist:
+#           # Update step before the call, so that if it runs out of gas, the resumer goes to the right step
+#           j-expr(j-assign(step, after-app-label)),
+#           j-expr(j-assign(compiler.cur-apploc, compiler.get-loc(l))),
+#           j-var(colon-field-id.id, colon-field),
+#           # if num-args < 6:
+#           #   j-expr(j-assign(ans, rt-method("callIfPossible" + tostring(num-args),
+#           #         link(compiler.get-loc(l), link(j-id(colon-field-id), link(compiled-obj, compiled-args))))))
+#           # else:
+#             j-if(check-method, j-block([clist: 
+#                   j-expr(j-assign(ans, j-app(j-dot(colon-field-id, "full_meth"),
+#                         cl-cons(compiled-obj, compiled-args))))
+#                 ]),
+#               j-block([clist:
+#                   check-fun(compiler.get-loc(l), colon-field-id),
+#                   j-expr(j-assign(ans, app(compiler.get-loc(l), colon-field-id, compiled-args)))
+#                 ])),
+#           # end
+#           j-break]),
+# >>>>>>> e4f2ce9... Revert "make method calls use a helper; this cuts 3mb of standalone size, and improves some method calls"
   else:
     obj-id = j-id(fresh-id(compiler-name("obj")))
     colon-field = rt-method("getColonFieldLoc", [clist: obj-id, j-str(methname), compiler.get-loc(l)])
