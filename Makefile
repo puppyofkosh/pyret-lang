@@ -115,6 +115,7 @@ $(PHASEB)/pyret.jarr: $(PHASEA)/pyret.jarr $(PHASEB_ALL_DEPS) $(patsubst src/%,$
 phaseC: $(PHASEC)/pyret.jarr
 
 $(PHASEC)/pyret.jarr: $(PHASEB)/pyret.jarr $(PHASEC_ALL_DEPS) $(patsubst src/%,$(PHASEC)/%,$(PARSERS))
+	cp src/js/base/runtime-no-bounce.js build/phaseC/js/runtime.js
 	ulimit -s unlimited; $(NODE) --stack-size=10000 $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
                       --build-runnable src/arr/compiler/pyret.arr \
                       --builtin-js-dir src/js/trove/ \
@@ -210,8 +211,10 @@ endif
 TEST_BUILD=$(NODE) $(PYRET_TEST_PHASE)/pyret.jarr \
 	  --builtin-js-dir src/js/trove/ \
 		--builtin-arr-dir src/arr/trove/ \
-		--require-config $(PYRET_TEST_CONFIG) \
+		--require-config src/scripts/standalone-configB.json \
 		--compiled-dir tests/compiled/
+#		--require-config $(PYRET_TEST_CONFIG) \
+
 
 .PHONY : old-test
 old-test: runtime-test evaluator-test compiler-test pyret-test regression-test type-check-test lib-test

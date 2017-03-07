@@ -3587,14 +3587,14 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         }
       }
 
-      console.log("In execThunk");
+//      console.log("In execThunk");
       try {
           result = thunk.app();
-          console.log("thunk.app() returned");
+//          console.log("thunk.app() returned");
           return wrapResult(new SuccessResult(result, {}));
       } catch(e) {
-          console.log("thunk.app() failed " + JSON.stringify(e));
-          console.log("stack is " + e.stack);
+//          console.log("thunk.app() failed " + JSON.stringify(e));
+//          console.log("stack is " + e.stack);
           return wrapResult(makeFailureResult(e, {}));
       }
 
