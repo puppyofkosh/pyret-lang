@@ -3569,7 +3569,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
     function runThunk(f, then) {
       return thisRuntime.run(f, thisRuntime.namespace, {}, then);
     }
-
+          
     function execThunk(thunk) {
       function wrapResult(res) {
         if(isSuccessResult(res)) {
@@ -3586,20 +3586,32 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
           return;
         }
       }
-      return thisRuntime.pauseStack(function(restarter) {
-        thisRuntime.run(function(_, __) {
-          return thunk.app();
-        }, thisRuntime.namespace, {
-          sync: false
-        }, function(result) {
-          if(isFailureResult(result) &&
-             isPyretException(result.exn) &&
-             thisRuntime.ffi.isUserBreak(result.exn.exn)) { restarter.break(); }
-          else {
-            restarter.resume(wrapResult(result));
-          }
-        });
-      });
+
+      console.log("In execThunk");
+      try {
+          result = thunk.app();
+          console.log("thunk.app() returned");
+          return wrapResult(new SuccessResult(result, {}));
+      } catch(e) {
+          console.log("thunk.app() failed " + JSON.stringify(e));
+          console.log("stack is " + e.stack);
+          return wrapResult(makeFailureResult(e, {}));
+      }
+
+      //   return thisRuntime.pauseStack(function(restarter) {
+      //   thisRuntime.run(function(_, __) {
+      //     return thunk.app();
+      //   }, thisRuntime.namespace, {
+      //     sync: false
+      //   }, function(result) {
+      //     if(isFailureResult(result) &&
+      //        isPyretException(result.exn) &&
+      //        thisRuntime.ffi.isUserBreak(result.exn.exn)) { restarter.break(); }
+      //     else {
+      //       restarter.resume(wrapResult(result));
+      //     }
+      //   });
+      // });
     }
 
     function runWhileRunning(thunk) {
