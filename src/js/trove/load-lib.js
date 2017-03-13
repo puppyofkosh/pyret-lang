@@ -250,29 +250,35 @@
       };
 
 
-      return runtime.pauseStack(function(restarter) {
+//      return runtime.pauseStack(function(restarter) {
         var mainReached = false;
         var mainResult = "Main result unset: should not happen";
         postLoadHooks[main] = function(answer) {
           mainReached = true;
           mainResult = answer;
         }
-        return otherRuntime.runThunk(function() {
-          otherRuntime.modules = realm;
-          return otherRuntime.runStandalone(staticModules, realm, depMap, toLoad, postLoadHooks);
-        }, function(result) {
+        //return otherRuntime.runThunk(function() {
+        otherRuntime.modules = realm;
+
+        console.log("Calling runStandalone");
+        var result = otherRuntime.runStandalone(staticModules, realm, depMap, toLoad, postLoadHooks);
+
+        console.log("other runtime returned: " + JSON.stringify(result));
+//        }, function(result) {
           if(!mainReached) {
             // NOTE(joe): we should only reach here if there was an error earlier
             // on in the chain of loading that stopped main from running
-            restarter.resume(makeModuleResult(otherRuntime, result, makeRealm(realm), runtime.nothing));
+            //restarter.resume(makeModuleResult(otherRuntime, result, makeRealm(realm), runtime.nothing));
+            return makeModuleResult(otherRuntime, result, makeRealm(realm), runtime.nothing);
           }
           else {
             var finalResult = otherRuntime.makeSuccessResult(mainResult);
             finalResult.stats = result.stats;
-            restarter.resume(makeModuleResult(otherRuntime, finalResult, makeRealm(realm), runtime.nothing));
+            //restarter.resume(makeModuleResult(otherRuntime, finalResult, makeRealm(realm), runtime.nothing));
+            return makeModuleResult(otherRuntime, finalResult, makeRealm(realm), runtime.nothing);
           }
-        });
-      });
+//        });
+//      });
 
     }
     var vals = {

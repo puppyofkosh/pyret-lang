@@ -211,7 +211,7 @@ endif
 TEST_BUILD=$(NODE) $(PYRET_TEST_PHASE)/pyret.jarr \
 	  --builtin-js-dir src/js/trove/ \
 		--builtin-arr-dir src/arr/trove/ \
-		--require-config src/scripts/standalone-configB.json \
+		--require-config src/scripts/standalone-config-current-runtime.json \
 		--compiled-dir tests/compiled/
 #		--require-config $(PYRET_TEST_CONFIG) \
 
@@ -256,6 +256,8 @@ all-pyret-test: tests/pyret/all.jarr parse-test
 	$(NODE) tests/pyret/all.jarr
 
 tests/pyret/main2.jarr: phaseA tests/pyret/main2.arr  $(TEST_FILES)
+	cp src/js/base/*.js build/phaseB/js/
+	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
 	$(TEST_BUILD) \
 		--outfile tests/pyret/main2.jarr \
 		--build-runnable tests/pyret/main2.arr \

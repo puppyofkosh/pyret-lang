@@ -5050,8 +5050,6 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
             var arr = [];
             for(var i = 0; i < mod.nativeRequires.length; i++) {
                 var module = mod.nativeRequires[i];
-                console.log("module: " + JSON.stringify(module));
-                console.log("module type is " + typeof(module));
                 var val = require(module);
                 arr.push(val);
             }
