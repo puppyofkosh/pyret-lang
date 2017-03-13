@@ -5046,14 +5046,25 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
             // CONSOLE.log("Nothing to load, skipping stack-pause");
             return mod.nativeRequires;
           } else {
-            return thisRuntime.pauseStack(function(restarter) {
-              // CONSOLE.log("About to load: ", mod.nativeRequires);
-              require(mod.nativeRequires, function(/* varargs */) {
-                var nativeInstantiated = Array.prototype.slice.call(arguments);
-                //CONSOLE.log("Loaded: ", nativeInstantiated);
-                restarter.resume(nativeInstantiated);
-              });
-            });
+            console.log("bouncing in runStandalone to load: " + JSON.stringify(mod.nativeRequires));
+            var arr = [];
+            for(var i = 0; i < mod.nativeRequires.length; i++) {
+                var module = mod.nativeRequires[i];
+                console.log("module: " + JSON.stringify(module));
+                console.log("module type is " + typeof(module));
+                var val = require(module);
+                arr.push(val);
+            }
+            
+            return arr;
+            // return thisRuntime.pauseStack(function(restarter) {
+            //   CONSOLE.log("About to load: Bounced! ", mod.nativeRequires);
+            //     require(mod.nativeRequires, function(/* varargs */) {
+            //     var nativeInstantiated = Array.prototype.slice.call(arguments);
+            //     //CONSOLE.log("Loaded: ", nativeInstantiated);
+            //     restarter.resume(nativeInstantiated);
+            //   });
+            // });
           }
         }, function(natives) {
           function continu() {
