@@ -245,7 +245,11 @@ TYPE_TEST_FILES := $(wildcard tests/type-check/bad/*.arr) $(wildcard tests/type-
 REG_TEST_FILES := $(wildcard tests/pyret/regression/*.arr)
 MAIN_TEST_FILES := tests/pyret/main2.arr tests/type-check/main.arr tests/pyret/regression.arr tests/lib-test/lib-test-main.arr tests/all.arr
 
-tests/pyret/all.jarr: phaseA $(TEST_FILES) $(TYPE_TEST_FILES) $(REG_TEST_FILES) $(MAIN_TEST_FILES)
+phaseBTestSetup: $(PHASEB_ALL_DEPS) $(patsubst src/%,$(PHASEB)/%,$(PARSERS))
+	cp src/js/base/*.js build/phaseB/js/
+	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
+
+tests/pyret/all.jarr: phaseA $(TEST_FILES) $(TYPE_TEST_FILES) $(REG_TEST_FILES) $(MAIN_TEST_FILES) phaseBTestSetup
 	$(TEST_BUILD) \
 		--build-runnable tests/all.arr \
     --outfile tests/pyret/all.jarr \
@@ -255,9 +259,7 @@ tests/pyret/all.jarr: phaseA $(TEST_FILES) $(TYPE_TEST_FILES) $(REG_TEST_FILES) 
 all-pyret-test: tests/pyret/all.jarr parse-test
 	$(NODE) tests/pyret/all.jarr
 
-tests/pyret/main2.jarr: phaseA tests/pyret/main2.arr  $(TEST_FILES) $(PHASEB_ALL_DEPS) $(patsubst src/%,$(PHASEB)/%,$(PARSERS))
-	cp src/js/base/*.js build/phaseB/js/
-	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
+tests/pyret/main2.jarr: phaseA tests/pyret/main2.arr  $(TEST_FILES) phaseBTestSetup
 	$(TEST_BUILD) \
 		--outfile tests/pyret/main2.jarr \
 		--build-runnable tests/pyret/main2.arr \
