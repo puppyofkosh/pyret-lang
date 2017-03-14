@@ -255,7 +255,7 @@ tests/pyret/all.jarr: phaseA $(TEST_FILES) $(TYPE_TEST_FILES) $(REG_TEST_FILES) 
 all-pyret-test: tests/pyret/all.jarr parse-test
 	$(NODE) tests/pyret/all.jarr
 
-tests/pyret/main2.jarr: phaseA tests/pyret/main2.arr  $(TEST_FILES)
+tests/pyret/main2.jarr: phaseA tests/pyret/main2.arr  $(TEST_FILES) $(PHASEB_ALL_DEPS) $(patsubst src/%,$(PHASEB)/%,$(PARSERS))
 	cp src/js/base/*.js build/phaseB/js/
 	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
 	$(TEST_BUILD) \
