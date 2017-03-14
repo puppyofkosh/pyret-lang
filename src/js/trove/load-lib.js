@@ -156,13 +156,17 @@
     function renderErrorMessage(mr) {
       var res = getModuleResultResult(mr);
       var execRt = mr.val.runtime;
-      return runtime.pauseStack(function(restarter) {
+//        return runtime.pauseStack(
+
+      var pauseStackFn = function() {
         // TODO(joe): This works because it's a builtin and already loaded on execRt.
         // In what situations may this not work?
         var rendererrorMod = execRt.modules["builtin://render-error-display"];
         var rendererror = execRt.getField(rendererrorMod, "provide-plus-types");
         var gf = execRt.getField;
-        execRt.runThunk(function() {
+          //execRt.runThunk(
+
+        var runThunkFn = function() {
           if(execRt.isPyretVal(res.exn.exn) 
              && execRt.isObject(res.exn.exn) 
              && execRt.hasField(res.exn.exn, "render-reason")) {
@@ -186,16 +190,29 @@
           } else {
             return String(res.exn + "\n" + res.exn.stack);
           }
-        }, function(v) {
+        };
+
+        var thenFn = function(v) {
           if(execRt.isSuccessResult(v)) {
-            return restarter.resume(v.result)
+              return v.result;
+              //return restarter.resume(v.result)
           } else {
             console.error("load error");
             console.error("There was an exception while rendering the exception: ", v.exn);
-
           }
-        })
-      });
+        };
+
+        var result;
+        try {
+            result = runThunkFn();
+            result = execRt.makeSuccessResult(result, {});
+        } catch (e) {
+            result = execRt.makeFailureResult(e, {});
+        }
+        return thenFn(result);
+      };
+
+      return pauseStackFn();
     }
     function getModuleResultAnswer(mr) {
       checkSuccess(mr, "answer");
@@ -260,10 +277,14 @@
         //return otherRuntime.runThunk(function() {
         otherRuntime.modules = realm;
 
-        console.log("Calling runStandalone");
-        var result = otherRuntime.runStandalone(staticModules, realm, depMap, toLoad, postLoadHooks);
+        var result = undefined;
+        try {
+            result = otherRuntime.runStandalone(staticModules, realm, depMap, toLoad, postLoadHooks);
+            result = otherRuntime.makeSuccessResult(result, {});
+        } catch (e) {
+            result = otherRuntime.makeFailureResult(e, {});
+        }
 
-        console.log("other runtime returned: " + JSON.stringify(result));
 //        }, function(result) {
           if(!mainReached) {
             // NOTE(joe): we should only reach here if there was an error earlier

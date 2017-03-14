@@ -5046,7 +5046,6 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
             // CONSOLE.log("Nothing to load, skipping stack-pause");
             return mod.nativeRequires;
           } else {
-            console.log("bouncing in runStandalone to load: " + JSON.stringify(mod.nativeRequires));
             var arr = [];
             for(var i = 0; i < mod.nativeRequires.length; i++) {
                 var module = mod.nativeRequires[i];
