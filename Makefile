@@ -100,7 +100,6 @@ $(PHASEA)/pyret.jarr: $(PYRET_COMPA) $(PHASEA_ALL_DEPS) $(COMPILER_FILES) $(pats
 phaseB: $(PHASEB)/pyret.jarr
 
 $(PHASEB)/pyret.jarr: $(PHASEA)/pyret.jarr $(PHASEB_ALL_DEPS) $(patsubst src/%,$(PHASEB)/%,$(PARSERS))
-	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
 	$(NODE) $(PHASEA)/pyret.jarr --outfile build/phaseB/pyret.jarr \
                       --build-runnable src/arr/compiler/pyret.arr \
                       --builtin-js-dir src/js/trove/ \
@@ -115,7 +114,6 @@ $(PHASEB)/pyret.jarr: $(PHASEA)/pyret.jarr $(PHASEB_ALL_DEPS) $(patsubst src/%,$
 phaseC: $(PHASEC)/pyret.jarr
 
 $(PHASEC)/pyret.jarr: $(PHASEB)/pyret.jarr $(PHASEC_ALL_DEPS) $(patsubst src/%,$(PHASEC)/%,$(PARSERS))
-	cp src/js/base/runtime-no-bounce.js build/phaseC/js/runtime.js
 	ulimit -s unlimited; $(NODE) --stack-size=10000 $(PHASEB)/pyret.jarr --outfile build/phaseC/pyret.jarr \
                       --build-runnable src/arr/compiler/pyret.arr \
                       --builtin-js-dir src/js/trove/ \
@@ -247,7 +245,6 @@ MAIN_TEST_FILES := tests/pyret/main2.arr tests/type-check/main.arr tests/pyret/r
 
 phaseBTestSetup: $(PHASEB_ALL_DEPS) $(patsubst src/%,$(PHASEB)/%,$(PARSERS))
 	cp src/js/base/*.js build/phaseB/js/
-	cp src/js/base/runtime-no-bounce.js build/phaseB/js/runtime.js
 
 tests/pyret/all.jarr: phaseA $(TEST_FILES) $(TYPE_TEST_FILES) $(REG_TEST_FILES) $(MAIN_TEST_FILES) phaseBTestSetup
 	$(TEST_BUILD) \

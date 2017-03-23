@@ -66,11 +66,8 @@
           });
       }, function(err) {
           console.error("Error while using requirejs optimizer: ", err); 
-
-          // TODO: Not sure if this is what we want
           callback(runtime.ffi.makeMessageException("Error while using requirejs optimizer: ", String(err)));
       });
-        //      });
 
       return runtime.makeNothing();
     }
