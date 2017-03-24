@@ -5804,7 +5804,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
     };
 
     // FIXME: figure out how to set this in pyret code
-    thisRuntime.bounceAllowed = true;
+    thisRuntime.bounceAllowed = false;
 
     return thisRuntime;
   }
@@ -5813,3 +5813,5 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
 
 
 });
+
+
