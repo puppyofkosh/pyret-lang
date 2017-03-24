@@ -3489,6 +3489,9 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
     }
 
     function pauseStack(resumer) {
+      if (!thisRuntime.bounceAllowed) {
+        throw new Error("pauseStack called while runtime bounceAllowed is false");
+      }
       // CONSOLE.log("Pausing stack: ", RUN_ACTIVE, new Error().stack);
       RUN_ACTIVE = false;
       thisRuntime.EXN_STACKHEIGHT = 0;
