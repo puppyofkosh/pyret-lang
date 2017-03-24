@@ -4207,7 +4207,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var currentFst;
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
-          if(--thisRuntime.RUNGAS <= 0&& thisRuntime.bounceAllowed) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
