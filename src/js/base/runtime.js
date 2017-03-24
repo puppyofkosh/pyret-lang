@@ -3587,11 +3587,36 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         }
       }
 
-      try {
-        result = thunk.app();
-        return wrapResult(new SuccessResult(result, {}));
-      } catch(e) {
-        return wrapResult(makeFailureResult(e, {}));
+
+      var fn = function(_, __) {
+        return thunk.app();
+      };
+
+      if (thisRuntime.bounceAllowed) {
+        /* thunk may bounce, so clear the stack and let it run */
+        return thisRuntime.pauseStack(function(restarter) {
+          thisRuntime.run(fn, thisRuntime.namespace,{
+            sync: false
+          }, function(result) {
+            if(isFailureResult(result) &&
+               isPyretException(result.exn) &&
+               thisRuntime.ffi.isUserBreak(result.exn.exn)) { restarter.break(); }
+            else {
+              restarter.resume(wrapResult(result));
+            }
+          });
+        });
+      } else {
+        /* thunk won't bounce (and we're not allowed to use pauseStack)
+           so we just run on this stack and catch any exceptions */
+        var result;
+        try {
+          result = fn(undefined, undefined);
+          result = new SuccessResult(result, {});
+        } catch(e) {
+          result = makeFailureResult(e, {});
+        }
+        return wrapResult(result);
       }
     }
 
@@ -5024,19 +5049,18 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
 
         return thisRuntime.safeCall(function() {
           if (mod.nativeRequires.length === 0) {
-            // CONSOLE.log("Nothing to load, skipping stack-pause");
             return mod.nativeRequires;
           } else {
             if (thisRuntime.bounceAllowed) {
+              /* Use async version of require() */
               return thisRuntime.pauseStack(function(restarter) {
-                // CONSOLE.log("About to load: ", mod.nativeRequires);
                 require(mod.nativeRequires, function(/* varargs */) {
                   var nativeInstantiated = Array.prototype.slice.call(arguments);
-                  //CONSOLE.log("Loaded: ", nativeInstantiated);
                   restarter.resume(nativeInstantiated);
                 });
               });
             } else {
+              /* require() should be synchronous */
               var arr = [];
               for(var i = 0; i < mod.nativeRequires.length; i++) {
                 var val = require(mod.nativeRequires[i]);
