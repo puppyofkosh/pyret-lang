@@ -125,7 +125,7 @@
       return mr.val.runtime.getField(mr.val.result.result, "checks");
     }
     function renderCheckResults(mr) {
-      return runtime.pauseStack(function(restarter) {
+      var pauseStack = function(restarter) {
         var res = getModuleResultResult(mr);
         var execRt = mr.val.runtime;
         var checkerMod = execRt.modules["builtin://checker"];
@@ -139,19 +139,28 @@
         };
         var getStackP = execRt.makeFunction(getStack, "get-stack");
         var checks = getModuleResultChecks(mr);
-        execRt.runThunk(function() { return toCall.app(checks, getStackP); },
-          function(printedCheckResult) {
-            if(execRt.isSuccessResult(printedCheckResult)) {
-              if(execRt.isString(printedCheckResult.result)) {
-                restarter.resume(runtime.makeString(execRt.unwrap(printedCheckResult.result)));
-              }
+
+        var thunk = function() { return toCall.app(checks, getStackP); };
+        var thenFn = function(printedCheckResult) {
+          if(execRt.isSuccessResult(printedCheckResult)) {
+            if(execRt.isString(printedCheckResult.result)) {
+              restarter.resume(runtime.makeString(execRt.unwrap(printedCheckResult.result)));
             }
-            else if(execRt.isFailureResult(printedCheckResult)) {
-              console.error(printedCheckResult.exn.dict);
-              restarter.resume(runtime.makeString("There was an exception while formatting the check results"));
-            }
-          });
-      });
+          }
+          else if(execRt.isFailureResult(printedCheckResult)) {
+            console.error(printedCheckResult.exn.dict);
+            restarter.resume(runtime.makeString("There was an exception while formatting the check results"));
+          }
+        };
+
+        return execRt.runThunk(thunk, thenFn);
+      };
+
+      if (runtime.bounceAllowed) {
+        return runtime.pauseStack(pauseFn);
+      } else {
+        return pauseFn();
+      }
     }
     function renderErrorMessage(mr) {
       var res = getModuleResultResult(mr);
@@ -201,18 +210,7 @@
           }
         };
 
-        if (execRt.bounceAllowed) {
-          execRt.runThunk(renderFn, thenFn);
-        } else {
-          var result;
-          try {
-            result = renderFn();
-            result = execRt.makeSuccessResult(result, {});
-          } catch (e) {
-            result = execRt.makeFailureResult(e, {});
-          }
-          return thenFn(result);
-        }
+        return execRt.runThunk(renderFn, thenFn);
       };
 
       if (execRt.bounceAllowed) {
@@ -307,18 +305,7 @@
           }
         };
 
-        if (otherRuntime.bounceAllowed) {
-          return otherRuntime.runThunk(thunk, then);
-        } else {
-          var result;
-          try {
-            result = thunk();
-            result = otherRuntime.makeSuccessResult(result, {});
-          } catch (e) {
-            result = otherRuntime.makeFailureResult(e, {});
-          }
-          return then(result);
-        }
+        return otherRuntime.runThunk(thunk, then);
       };
 
       if (runtime.bounceAllowed) {

@@ -3570,7 +3570,19 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
     }
 
     function runThunk(f, then) {
-      return thisRuntime.run(f, thisRuntime.namespace, {}, then);
+      if (thisRuntime.bounceAllowed) {
+        return thisRuntime.run(f, thisRuntime.namespace, {}, then);
+      } else {
+        // Just run it on this stack and use a try/catch handler
+        var result;
+        try {
+          result = f();
+          result = otherRuntime.makeSuccessResult(result, {});
+        } catch (e) {
+          result = otherRuntime.makeFailureResult(e, {});
+        }
+        return then(result);
+      }
     }
 
     function execThunk(thunk) {
