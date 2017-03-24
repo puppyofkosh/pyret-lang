@@ -1093,7 +1093,7 @@ fun compile-a-app(l :: N.Loc, f :: N.AVal, args :: List<N.AVal>,
     app-info :: A.AppInfo):
 
   is-safe-id = N.is-a-id(f) or N.is-a-id-safe-letrec(f)
-  app-compiler = if is-safe-id and is-function-flat(compiler.flatness-env, f.id.key()) block:
+  app-compiler = if is-safe-id and is-function-flat(compiler.flatness-env, f.id.key()):
     compile-flat-app
   else:
     compile-split-app
