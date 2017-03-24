@@ -403,22 +403,17 @@ fun build-runnable-standalone(path, require-config-path, outfile, options) block
 
       when options.collect-times: stats.set-now("standalone", time-now()) end
 
-      callback = lam(result):
-        print("make-standalone result: " + tostring(result) + "\n")
-      end
-      ans = MS.make-standalone(program.natives, program.js-ast,
-        JSON.j-obj(config.freeze()).serialize(), options.standalone-file, callback)
-      print("Ans is " + tostring(ans) + "\n")
-      when options.collect-times block:
-
-        # TODO this belongs in the callback
-        standalone-end = time-now() - stats.get-value-now("standalone")
-        stats.set-now("standalone", [list: "Outputing JS: " + tostring(standalone-end) + "ms"])
-        for SD.each-key-now(key from stats):
-          print(key + ": \n" + stats.get-value-now(key).join-str(", \n") + "\n")
+      callback = lam(_):
+        when options.collect-times block:
+          standalone-end = time-now() - stats.get-value-now("standalone")
+          stats.set-now("standalone", [list: "Outputing JS: " + tostring(standalone-end) + "ms"])
+          for SD.each-key-now(key from stats):
+            print(key + ": \n" + stats.get-value-now(key).join-str(", \n") + "\n")
+          end
         end
       end
-      ans
+      MS.make-standalone(program.natives, program.js-ast,
+        JSON.j-obj(config.freeze()).serialize(), options.standalone-file, callback)
   end
 end
 
