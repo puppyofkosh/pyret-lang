@@ -827,6 +827,20 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       return new PMethod(app8, meth, name);
     }
 
+    function maybeMethodCall(obj, fieldname, loc, ...args) {
+      var R = thisRuntime;
+      var field = R.getColonFieldLoc(obj,fieldname,loc);
+      if(thisRuntime.isMethod(field)) {
+        return field.full_meth(obj, ...args);
+      }
+      else {
+        if(!(R.isFunction(field))) {
+          R.ffi.throwNonFunApp(loc,field);
+        }
+        return field.app(...args);
+      }
+    }
+
     function makeMethodFromFun(meth, name) {
       return new PMethod(appN, meth, name);
     }
@@ -3573,11 +3587,36 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         }
       }
 
-      try {
-        result = thunk.app();
-        return wrapResult(new SuccessResult(result, {}));
-      } catch(e) {
-        return wrapResult(makeFailureResult(e, {}));
+
+      var fn = function(_, __) {
+        return thunk.app();
+      };
+
+      if (thisRuntime.bounceAllowed) {
+        /* thunk may bounce, so clear the stack and let it run */
+        return thisRuntime.pauseStack(function(restarter) {
+          thisRuntime.run(fn, thisRuntime.namespace,{
+            sync: false
+          }, function(result) {
+            if(isFailureResult(result) &&
+               isPyretException(result.exn) &&
+               thisRuntime.ffi.isUserBreak(result.exn.exn)) { restarter.break(); }
+            else {
+              restarter.resume(wrapResult(result));
+            }
+          });
+        });
+      } else {
+        /* thunk won't bounce (and we're not allowed to use pauseStack)
+           so we just run on this stack and catch any exceptions */
+        var result;
+        try {
+          result = fn(undefined, undefined);
+          result = new SuccessResult(result, {});
+        } catch(e) {
+          result = makeFailureResult(e, {});
+        }
+        return wrapResult(result);
       }
     }
 
@@ -4193,7 +4232,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var currentFst;
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
-          if(--thisRuntime.RUNGAS <= 0&& thisRuntime.bounceAllowed) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -5010,19 +5049,18 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
 
         return thisRuntime.safeCall(function() {
           if (mod.nativeRequires.length === 0) {
-            // CONSOLE.log("Nothing to load, skipping stack-pause");
             return mod.nativeRequires;
           } else {
             if (thisRuntime.bounceAllowed) {
+              /* Use async version of require() */
               return thisRuntime.pauseStack(function(restarter) {
-                // CONSOLE.log("About to load: ", mod.nativeRequires);
                 require(mod.nativeRequires, function(/* varargs */) {
                   var nativeInstantiated = Array.prototype.slice.call(arguments);
-                  //CONSOLE.log("Loaded: ", nativeInstantiated);
                   restarter.resume(nativeInstantiated);
                 });
               });
             } else {
+              /* require() should be synchronous */
               var arr = [];
               for(var i = 0; i < mod.nativeRequires.length; i++) {
                 var val = require(mod.nativeRequires[i]);
@@ -5523,6 +5561,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       'makeMethod8'   : makeMethod8,
       'makeMethodN'   : makeMethodN,
       'makeMethodFromFun' : makeMethodFromFun,
+      'maybeMethodCall': maybeMethodCall,
       'callIfPossible0' : callIfPossible0,
       'callIfPossible1' : callIfPossible1,
       'callIfPossible2' : callIfPossible2,
@@ -5765,7 +5804,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
     };
 
     // FIXME: figure out how to set this in pyret code
-    thisRuntime.bounceAllowed = false;
+    thisRuntime.bounceAllowed = true;
 
     return thisRuntime;
   }
