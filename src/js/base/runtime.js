@@ -3068,7 +3068,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         stackFrame = $ar.args[2];
         $fun_ans = $ar.vars[0];
       }
-      if (--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) {
+      if ((--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) && thisRuntime.bounceAllowed) {
         thisRuntime.EXN_STACKHEIGHT = 0;
         skipLoop = true;
         $ans = thisRuntime.makeCont();
@@ -3115,7 +3115,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
             i = i + 1;
           }
         }
-        if (--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) {
+        if ((--thisRuntime.GAS <= 0 || --thisRuntime.RUNGAS <= 0) && thisRuntime.bounceAllowed) {
           thisRuntime.EXN_STACKHEIGHT = 0;
           return thisRuntime.makeCont();
         }
@@ -3126,7 +3126,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
 
           if (isContinuation(res)) { return res; }
 
-          if (--thisRuntime.RUNGAS <= 0) {
+          if (--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }  
@@ -3586,20 +3586,13 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
           return;
         }
       }
-      return thisRuntime.pauseStack(function(restarter) {
-        thisRuntime.run(function(_, __) {
-          return thunk.app();
-        }, thisRuntime.namespace, {
-          sync: false
-        }, function(result) {
-          if(isFailureResult(result) &&
-             isPyretException(result.exn) &&
-             thisRuntime.ffi.isUserBreak(result.exn.exn)) { restarter.break(); }
-          else {
-            restarter.resume(wrapResult(result));
-          }
-        });
-      });
+
+      try {
+        result = thunk.app();
+        return wrapResult(new SuccessResult(result, {}));
+      } catch(e) {
+        return wrapResult(makeFailureResult(e, {}));
+      }
     }
 
     function runWhileRunning(thunk) {
@@ -3815,14 +3808,14 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         var $step = 0;
       }
       var cleanQuit = true;
-      if (--thisRuntime.GAS <= 0) {
+      if (--thisRuntime.GAS <= 0 && thisRuntime.bounceAllowed) {
         thisRuntime.EXN_STACKHEIGHT = 0;
         cleanQuit = false;
         $ans = thisRuntime.makeCont();
       }
       
       while (cleanQuit && (curIdx < len)) {
-        if (--thisRuntime.RUNGAS <= 0) {
+        if (--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
           thisRuntime.EXN_STACKHEIGHT = 0;
           cleanQuit = false;
           $ans = thisRuntime.makeCont();
@@ -3873,14 +3866,14 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         var $step = 0;
       }
       var cleanQuit = true;
-      if (--thisRuntime.GAS <= 0) {
+      if (--thisRuntime.GAS <= 0 && thisRuntime.bounceAllowed) {
         thisRuntime.EXN_STACKHEIGHT = 0;
         $ans = thisRuntime.makeCont();
         cleanQuit = false;
       }
       
       while (cleanQuit && curIdx < len) {
-        if (--thisRuntime.RUNGAS <= 0) {
+        if (--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
           thisRuntime.EXN_STACKHEIGHT = 0;
           $ans = thisRuntime.makeCont();
           cleanQuit = false;
@@ -3990,7 +3983,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var length = arr.length;
       function foldHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4027,7 +4020,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var newArray = new Array(length);
       function mapHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4063,7 +4056,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var length = arr.length;
       function eachHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4096,7 +4089,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var newArray = new Array(length);
       function mapHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4133,7 +4126,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var currentFst;
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4176,7 +4169,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var newArray = new Array(length);
       function mapHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4214,7 +4207,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var currentFst;
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0&& thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4256,7 +4249,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var newArray = new Array();
       function filterHelp() {
         while(currentIndex < (length - 1)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -4298,7 +4291,7 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
       var currentLst = lst;
       function foldHelp() {
         while(thisRuntime.ffi.isLink(currentLst)) {
-          if(--thisRuntime.RUNGAS <= 0) {
+          if(--thisRuntime.RUNGAS <= 0 && thisRuntime.bounceAllowed) {
             thisRuntime.EXN_STACKHEIGHT = 0;
             return thisRuntime.makeCont();
           }
@@ -5034,14 +5027,23 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
             // CONSOLE.log("Nothing to load, skipping stack-pause");
             return mod.nativeRequires;
           } else {
-            return thisRuntime.pauseStack(function(restarter) {
-              // CONSOLE.log("About to load: ", mod.nativeRequires);
-              require(mod.nativeRequires, function(/* varargs */) {
-                var nativeInstantiated = Array.prototype.slice.call(arguments);
-                //CONSOLE.log("Loaded: ", nativeInstantiated);
-                restarter.resume(nativeInstantiated);
+            if (thisRuntime.bounceAllowed) {
+              return thisRuntime.pauseStack(function(restarter) {
+                // CONSOLE.log("About to load: ", mod.nativeRequires);
+                require(mod.nativeRequires, function(/* varargs */) {
+                  var nativeInstantiated = Array.prototype.slice.call(arguments);
+                  //CONSOLE.log("Loaded: ", nativeInstantiated);
+                  restarter.resume(nativeInstantiated);
+                });
               });
-            });
+            } else {
+              var arr = [];
+              for(var i = 0; i < mod.nativeRequires.length; i++) {
+                var val = require(mod.nativeRequires[i]);
+                arr.push(val);
+              }
+              return arr;
+            }
           }
         }, function(natives) {
           function continu() {
@@ -5776,6 +5778,9 @@ function (Namespace, jsnums, codePoint, seedrandom, util) {
         console.error("Dummy throwMessageException: " + thing);
       }
     };
+
+    // FIXME: figure out how to set this in pyret code
+    thisRuntime.bounceAllowed = true;
 
     return thisRuntime;
   }

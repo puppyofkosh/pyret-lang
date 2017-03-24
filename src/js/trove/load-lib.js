@@ -156,13 +156,13 @@
     function renderErrorMessage(mr) {
       var res = getModuleResultResult(mr);
       var execRt = mr.val.runtime;
-      return runtime.pauseStack(function(restarter) {
+      var pauseStackFn = function(restarter) {
         // TODO(joe): This works because it's a builtin and already loaded on execRt.
         // In what situations may this not work?
         var rendererrorMod = execRt.modules["builtin://render-error-display"];
         var rendererror = execRt.getField(rendererrorMod, "provide-plus-types");
         var gf = execRt.getField;
-        execRt.runThunk(function() {
+        var renderFn = function() {
           if(execRt.isPyretVal(res.exn.exn) 
              && execRt.isObject(res.exn.exn) 
              && execRt.hasField(res.exn.exn, "render-reason")) {
@@ -186,16 +186,40 @@
           } else {
             return String(res.exn + "\n" + res.exn.stack);
           }
-        }, function(v) {
+        };
+
+        var thenFn = function(v) {
           if(execRt.isSuccessResult(v)) {
-            return restarter.resume(v.result)
+            if (execRt.bounceAllowed) {
+              return restarter.resume(v.result);
+            } else {
+              return v.result;
+            }
           } else {
             console.error("load error");
             console.error("There was an exception while rendering the exception: ", v.exn);
-
           }
-        })
-      });
+        };
+
+        if (execRt.bounceAllowed) {
+          execRt.runThunk(renderFn, thenFn);
+        } else {
+          var result;
+          try {
+            result = renderFn();
+            result = execRt.makeSuccessResult(result, {});
+          } catch (e) {
+            result = execRt.makeFailureResult(e, {});
+          }
+          return thenFn(result);
+        }
+      };
+
+      if (execRt.bounceAllowed) {
+        return runtime.pauseStack(pauseStackFn);
+      } else {
+        return pauseStackFn();
+      }
     }
     function getModuleResultAnswer(mr) {
       checkSuccess(mr, "answer");
@@ -249,31 +273,59 @@
         }
       };
 
-
-      return runtime.pauseStack(function(restarter) {
+      var pauseFunction = function(restarter) {
         var mainReached = false;
         var mainResult = "Main result unset: should not happen";
         postLoadHooks[main] = function(answer) {
           mainReached = true;
           mainResult = answer;
-        }
-        return otherRuntime.runThunk(function() {
+        };
+
+        var thunk = function() {
           otherRuntime.modules = realm;
           return otherRuntime.runStandalone(staticModules, realm, depMap, toLoad, postLoadHooks);
-        }, function(result) {
+        };
+
+        var then = function(result) {
+          var retVal;
+          
           if(!mainReached) {
             // NOTE(joe): we should only reach here if there was an error earlier
             // on in the chain of loading that stopped main from running
-            restarter.resume(makeModuleResult(otherRuntime, result, makeRealm(realm), runtime.nothing));
+            retVal = makeModuleResult(otherRuntime, result, makeRealm(realm), runtime.nothing);
           }
           else {
             var finalResult = otherRuntime.makeSuccessResult(mainResult);
             finalResult.stats = result.stats;
-            restarter.resume(makeModuleResult(otherRuntime, finalResult, makeRealm(realm), runtime.nothing));
+            retVal = makeModuleResult(otherRuntime, finalResult, makeRealm(realm), runtime.nothing);
           }
-        });
-      });
 
+          if (runtime.bounceAllowed) {
+            restarter.resume(retVal);
+          } else {
+            return retVal;
+          }
+        };
+
+        if (otherRuntime.bounceAllowed) {
+          return otherRuntime.runThunk(thunk, then);
+        } else {
+          var result;
+          try {
+            result = thunk();
+            result = otherRuntime.makeSuccessResult(result, {});
+          } catch (e) {
+            result = otherRuntime.makeFailureResult(e, {});
+          }
+          return then(result);
+        }
+      };
+
+      if (runtime.bounceAllowed) {
+        return runtime.pauseStack(pauseFunction);
+      } else {
+        return pauseFunction();
+      }
     }
     var vals = {
       "run-program": runtime.makeFunction(runProgram, "run-program"),
