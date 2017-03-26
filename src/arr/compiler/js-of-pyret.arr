@@ -235,7 +235,15 @@ fun make-expr-flatness-env(
     | a-let(_, bind, val, body) =>
       val-flatness = if AA.is-a-lam(val) or AA.is-a-method(val) block:
         lam-flatness = make-expr-flatness-env(val.body, sd)
-        sd.set-now(bind.id.key(), some(lam-flatness))
+        # convert the flatness number into an option
+        lam-flatness-opt =
+          if lam-flatness == INF-FLATNESS:
+            none
+          else:
+            some(lam-flatness)
+          end
+        sd.set-now(bind.id.key(), lam-flatness-opt)
+
         # flatness of defining this lambda is 0, since we're not actually
         # doing anything with it
         0
@@ -266,7 +274,6 @@ fun make-expr-flatness-env(
       # now we don't since I'm not sure it'd work right.
       flatness-max(make-lettable-flatness-env(e, sd), make-expr-flatness-env(body, sd))
     | a-var(_, bind, val, body) =>
-      # Do same thing with a-var as with a-let for now
       make-expr-flatness-env(body, sd)
     | a-seq(_, lettable, expr) =>
       a-flatness = make-lettable-flatness-env(lettable, sd)
@@ -279,8 +286,12 @@ end
 fun get-flatness-for-call(function-name :: String, sd :: SD.MutableStringDict<Option<Number>>) -> Number:
   # If it's not in our lookup dict OR the flatness is none treat it the same
   val = sd.get-now(function-name).or-else(none)
-  cases (Option) val:
-    | some(flatness) => flatness + 1
+  cases (Option) val block:
+    | some(flatness) =>
+      when flatness == INF-FLATNESS:
+        raise("Error: INF-FLATNESS value shouldn't enter flatness env")
+      end
+      flatness + 1
     | none => INF-FLATNESS
   end
 end

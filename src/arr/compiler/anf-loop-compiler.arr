@@ -1079,11 +1079,14 @@ fun compile-split-update(compiler, loc, opt-dest, obj :: N.AVal, fields :: List<
 
 end
 
-fun is-function-flat(flatness-env :: D.StringDict<Option<Number>>, fun-name :: String) -> Boolean:
+fun is-function-flat(flatness-env :: D.StringDict<Option<Number>>, fun-name :: String) -> Boolean block:
   flatness-opt-opt = flatness-env.get(fun-name)
   flatness-opt = cases (Option) flatness-opt-opt:
     | some(f-opt) => f-opt
     | none => none
+  end
+  when is-some(flatness-opt) and (flatness-opt.value < 0):
+    raise("Error: flatness env shouldn't contain negative values")
   end
   is-some(flatness-opt) and (flatness-opt.value <= 5)
 end
