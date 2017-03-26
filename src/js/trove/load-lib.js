@@ -142,14 +142,21 @@
 
         var thunk = function() { return toCall.app(checks, getStackP); };
         var thenFn = function(printedCheckResult) {
+          var result;
           if(execRt.isSuccessResult(printedCheckResult)) {
             if(execRt.isString(printedCheckResult.result)) {
-              restarter.resume(runtime.makeString(execRt.unwrap(printedCheckResult.result)));
+              result = runtime.makeString(execRt.unwrap(printedCheckResult.result));
             }
           }
           else if(execRt.isFailureResult(printedCheckResult)) {
             console.error(printedCheckResult.exn.dict);
-            restarter.resume(runtime.makeString("There was an exception while formatting the check results"));
+            result = runtime.makeString("There was an exception while formatting the check results");
+          }
+
+          if (runtime.bounceAllowed) {
+            restarter.resume(result);
+          } else {
+            return result;
           }
         };
 
