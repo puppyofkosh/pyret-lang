@@ -17,7 +17,6 @@
 
     */
     function makeStandalone(deps, body, configJSON, standaloneFile, callback) {
-      console.log("Callback is " + JSON.stringify(callback));
       runtime.checkArity(5, arguments, ["make-standalone"]);
       runtime.checkList(deps);
       runtime.checkString(configJSON);
@@ -43,7 +42,6 @@
       config.out = path.join(storeDir, "program-deps.js");
       config.name = "program-require";
       requirejs.optimize(config, function(result) {
-          console.log("In requirejs optimize callback!!");
           var programWithDeps = fs.readFileSync(config.out, {encoding: 'utf8'});
           // Browser/node check based on window below
           fs.open(realOut, "w", function(err, outFile) {
